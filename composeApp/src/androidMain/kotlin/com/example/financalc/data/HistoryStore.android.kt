@@ -5,6 +5,7 @@ import com.example.financalc.i18n.Language
 
 object AndroidAppContext {
     lateinit var appContext: Context
+    val isInitialized: Boolean get() = ::appContext.isInitialized
 }
 
 private class AndroidPrefsHistoryStore(context: Context) : HistoryStore {
@@ -39,5 +40,5 @@ private class AndroidPrefsHistoryStore(context: Context) : HistoryStore {
 }
 
 actual fun createHistoryStore(): HistoryStore =
-    if (AndroidAppContext::appContext.isInitialized) AndroidPrefsHistoryStore(AndroidAppContext.appContext)
+    if (AndroidAppContext.isInitialized) AndroidPrefsHistoryStore(AndroidAppContext.appContext)
     else InMemoryHistoryStore()
