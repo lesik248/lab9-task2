@@ -2,88 +2,144 @@ name: Build all platforms
 
 on:
   push:
-    branches: [main]
+    branches: [ main, master ]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  android-and-desktop:
-    name: Android APK + Linux Desktop + tests
+  android:
+    name: Android (APK)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Ensure Gradle wrapper jar
-        run: gradle wrapper --gradle-version 8.10.2 --distribution-type bin
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
-      - name: Common & Desktop tests
-        run: ./gradlew :composeApp:desktopTest --stacktrace
+      - name: Run common unit tests (Android)
+        run: ./gradlew :composeApp:testDebugUnitTest --stacktrace
 
-      - name: Android assemble
+      - name: Assemble debug APK
         run: ./gradlew :composeApp:assembleDebug --stacktrace
 
-      - name: Linux Desktop distributable (.deb)
-        run: ./gradlew :composeApp:packageDeb --stacktrace
-        continue-on-error: true
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: android-apk
+          name: financalc-android-debug-apk
           path: composeApp/build/outputs/apk/debug/*.apk
-          if-no-files-found: warn
 
-      - name: Upload Linux .deb
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-deb
-          path: composeApp/build/compose/binaries/main/deb/*.deb
-          if-no-files-found: warn
-
-  web:
-    name: Web (wasmJs)
+  desktop:
+    name: Desktop (Linux JVM)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Ensure Gradle wrapper jar
-        run: gradle wrapper --gradle-version 8.10.2 --distribution-type bin
-      - name: Build Web distribution
-        run: ./gradlew :composeApp:wasmJsBrowserDistribution --stacktrace
-      - name: Upload web bundle
-        uses: actions/upload-artifact@v4
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run desktop tests (unit + UI + integration)
+        run: ./gradlew :composeApp:desktopTest --stacktrace
+
+      - name: Package distribution
+        run: ./gradlew :composeApp:packageDistributionForCurrentOS --stacktrace
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: web-dist
-          path: composeApp/build/dist/wasmJs/productionExecutable
-          if-no-files-found: warn
+          name: financalc-desktop-linux
+          path: |
+            composeApp/build/compose/binaries/main/deb/*.deb
+            composeApp/build/compose/jars/*.jar
+
+  web:
+    name: Web (Wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Wasm distribution
+        run: ./gradlew :composeApp:wasmJsBrowserDistribution --stacktrace
+
+      - name: Disable Jekyll for Pages
+        run: touch composeApp/build/dist/wasmJs/productionExecutable/.nojekyll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: financalc-web
+          path: composeApp/build/dist/wasmJs/productionExecutable/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: composeApp/build/dist/wasmJs/productionExecutable/
+
+  deploy-pages:
+    name: Deploy Web to GitHub Pages
+    needs: web
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   ios:
-    name: iOS framework
+    name: iOS framework (Simulator)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Ensure Gradle wrapper jar
-        run: gradle wrapper --gradle-version 8.10.2 --distribution-type bin
-      - name: Build iOS Simulator framework
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Link iOS Simulator (arm64) framework
         run: ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64 --stacktrace
