@@ -73,7 +73,7 @@ actual fun NumberInput(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.let { if (testTag.isNotEmpty()) it.testTag(testTag) else it }
+        modifier = modifier
     ) {
         OutlinedTextField(
             value = value,
@@ -82,7 +82,9 @@ actual fun NumberInput(
             isError = error != null,
             supportingText = { if (error != null) Text(error, color = MaterialTheme.colorScheme.error) },
             singleLine = true,
-            modifier = Modifier.width(260.dp)
+            modifier = Modifier
+                .width(260.dp)
+                .let { if (testTag.isNotEmpty()) it.testTag(testTag) else it }
         )
         Column {
             OutlinedButton(
