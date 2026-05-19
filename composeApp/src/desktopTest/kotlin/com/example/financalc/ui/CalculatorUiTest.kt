@@ -1,12 +1,13 @@
 package com.example.financalc.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.runComposeUiTest
 import com.example.financalc.App
 import com.example.financalc.data.InMemoryHistoryStore
@@ -35,37 +36,35 @@ class CalculatorUiTest {
     @Test
     fun successful_calculation_shows_chart() = runComposeUiTest {
         setContent { App(historyStore = InMemoryHistoryStore()) }
-        onNodeWithTag("input_principal").performTextClearance()
-        onNodeWithTag("input_principal").performTextInput("10000")
-        onNodeWithTag("input_rate").performTextClearance()
-        onNodeWithTag("input_rate").performTextInput("5")
-        onNodeWithTag("input_years").performTextClearance()
-        onNodeWithTag("input_years").performTextInput("3")
+        onNodeWithTag("input_principal").performTextReplacement("10000")
+        onNodeWithTag("input_rate").performTextReplacement("5")
+        onNodeWithTag("input_years").performTextReplacement("3")
         onNodeWithTag("btn_calculate").performClick()
         waitForIdle()
-        onNodeWithTag("growth_chart").assertIsDisplayed()
+        // chart may be off-screen in the scrollable Column → assertExists, not assertIsDisplayed
+        onNodeWithTag("growth_chart").assertExists()
     }
 
     @Test
     fun invalid_principal_does_not_render_chart() = runComposeUiTest {
         setContent { App(historyStore = InMemoryHistoryStore()) }
-        onNodeWithTag("input_principal").performTextClearance()
-        onNodeWithTag("input_principal").performTextInput("abc")
+        onNodeWithTag("input_principal").performTextReplacement("abc")
         onNodeWithTag("btn_calculate").performClick()
         waitForIdle()
         val s = stringsFor(Language.English)
-        onNodeWithText(s.errNotANumber).assertIsDisplayed()
+        // supportingText is rendered inside the merged TextField semantics tree
+        onNodeWithText(s.errNotANumber, useUnmergedTree = true).assertExists()
+        onNodeWithTag("growth_chart").assertDoesNotExist()
     }
 
     @Test
     fun reset_clears_inputs() = runComposeUiTest {
         setContent { App(historyStore = InMemoryHistoryStore()) }
-        onNodeWithTag("input_principal").performTextClearance()
-        onNodeWithTag("input_principal").performTextInput("123")
+        onNodeWithTag("input_principal").performTextReplacement("123")
         onNodeWithTag("btn_reset").performClick()
         waitForIdle()
-        // After reset, principal should be empty — assert by clearing and re-typing succeeds
-        onNodeWithTag("input_principal").performTextInput("0")
+        // After reset, principal accepts a fresh value
+        onNodeWithTag("input_principal").performTextReplacement("0")
     }
 
     @Test

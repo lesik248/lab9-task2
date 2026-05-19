@@ -5,8 +5,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.runComposeUiTest
 import com.example.financalc.calculator.Capitalization
 import com.example.financalc.data.HistoryEntry
@@ -24,12 +24,9 @@ class IntegrationTest {
     fun end_to_end_calculation_persists_to_history_store() = runComposeUiTest {
         val store = InMemoryHistoryStore()
         setContent { App(historyStore = store) }
-        onNodeWithTag("input_principal").performTextClearance()
-        onNodeWithTag("input_principal").performTextInput("2000")
-        onNodeWithTag("input_rate").performTextClearance()
-        onNodeWithTag("input_rate").performTextInput("4")
-        onNodeWithTag("input_years").performTextClearance()
-        onNodeWithTag("input_years").performTextInput("2")
+        onNodeWithTag("input_principal").performTextReplacement("2000")
+        onNodeWithTag("input_rate").performTextReplacement("4")
+        onNodeWithTag("input_years").performTextReplacement("2")
         onNodeWithTag("btn_calculate").performClick()
         waitForIdle()
         val entries = store.loadAll()
@@ -52,7 +49,6 @@ class IntegrationTest {
     @Test
     fun switching_language_changes_visible_labels() = runComposeUiTest {
         setContent { App(historyStore = InMemoryHistoryStore()) }
-        // Open language switcher and pick Russian
         onNodeWithText(Language.English.displayName).performClick()
         waitForIdle()
         onNodeWithText(Language.Russian.displayName).performClick()
@@ -66,18 +62,16 @@ class IntegrationTest {
         val store = InMemoryHistoryStore()
         setContent { App(historyStore = store) }
         // Produce one entry
-        onNodeWithTag("input_principal").performTextClearance()
-        onNodeWithTag("input_principal").performTextInput("1000")
-        onNodeWithTag("input_rate").performTextClearance()
-        onNodeWithTag("input_rate").performTextInput("5")
-        onNodeWithTag("input_years").performTextClearance()
-        onNodeWithTag("input_years").performTextInput("1")
+        onNodeWithTag("input_principal").performTextReplacement("1000")
+        onNodeWithTag("input_rate").performTextReplacement("5")
+        onNodeWithTag("input_years").performTextReplacement("1")
         onNodeWithTag("btn_calculate").performClick()
         waitForIdle()
         assertEquals(1, store.loadAll().size)
 
         val s = stringsFor(Language.English)
-        onNodeWithText(s.clearHistory).performClick()
+        // Clear-history TextButton sits at the bottom of the column → scroll it into view first
+        onNodeWithText(s.clearHistory).performScrollTo().performClick()
         waitForIdle()
         assertTrue(store.loadAll().isEmpty())
     }
