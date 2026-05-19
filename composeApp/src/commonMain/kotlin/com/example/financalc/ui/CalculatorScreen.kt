@@ -115,7 +115,7 @@ private fun LanguageSwitcher(vm: CalculatorViewModel) {
                 DropdownMenuItem(
                     text = { Text(lang.displayName) },
                     onClick = {
-                        vm.setLanguage(lang)
+                        vm.changeLanguage(lang)
                         expanded = false
                     }
                 )

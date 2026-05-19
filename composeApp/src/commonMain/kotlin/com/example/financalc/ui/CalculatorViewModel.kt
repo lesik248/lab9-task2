@@ -42,7 +42,7 @@ class CalculatorViewModel(
 
     val historyEntries = mutableStateListOf<HistoryEntry>().also { it.addAll(history.loadAll()) }
 
-    fun setLanguage(lang: Language) {
+    fun changeLanguage(lang: Language) {
         language = lang
         history.saveLanguage(lang)
     }
