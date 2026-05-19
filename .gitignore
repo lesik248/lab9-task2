@@ -26,6 +26,8 @@ xcuserdata/
 **/xcshareddata/WorkspaceSettings.xcsettings
 Pods/
 *.xcworkspace/xcuserdata/
+iosApp/*.xcodeproj/
+iosApp/build/
 
 # OS
 Thumbs.db

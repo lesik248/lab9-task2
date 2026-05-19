@@ -124,7 +124,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   ios:
-    name: iOS framework (Simulator)
+    name: iOS Simulator (.app)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -143,3 +143,36 @@ jobs:
 
       - name: Link iOS Simulator (arm64) framework
         run: ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64 --stacktrace
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: iosApp
+        run: xcodegen generate
+
+      - name: Build .app for iOS Simulator
+        working-directory: iosApp
+        run: |
+          xcodebuild \
+            -project iosApp.xcodeproj \
+            -scheme iosApp \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath build \
+            -arch arm64 \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Zip the .app bundle
+        working-directory: iosApp/build/Build/Products/Debug-iphonesimulator
+        run: zip -ry iosApp-simulator.zip iosApp.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: financalc-ios-simulator-app
+          path: iosApp/build/Build/Products/Debug-iphonesimulator/iosApp-simulator.zip
